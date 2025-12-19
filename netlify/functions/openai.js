@@ -62,7 +62,6 @@ exports.handler = async function (event) {
       headers,
       body: JSON.stringify({
         text,
-        debug: json, // TEMPORARY — remove later
       }),
     };
   } catch (err) {
