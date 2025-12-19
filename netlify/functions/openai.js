@@ -1,14 +1,37 @@
-// netlify/functions/openai.js
-exports.handler = async function(event) {
+exports.handler = async function (event) {
+  // CORS headers (CRITICAL)
+  const headers = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
+
+  // Handle preflight request
+  if (event.httpMethod === "OPTIONS") {
+    return {
+      statusCode: 200,
+      headers,
+      body: "",
+    };
+  }
+
   if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: "Method Not Allowed" };
+    return {
+      statusCode: 405,
+      headers,
+      body: "Method Not Allowed",
+    };
   }
 
   try {
-    const { prompt, model = "gpt-4o-mini", max_tokens = 600 } = JSON.parse(event.body || "{}");
+    const { prompt } = JSON.parse(event.body || "{}");
 
     if (!prompt) {
-      return { statusCode: 400, body: "Missing prompt" };
+      return {
+        statusCode: 400,
+        headers,
+        body: "Missing prompt",
+      };
     }
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -18,25 +41,25 @@ exports.handler = async function(event) {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model,
+        model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }],
-        max_tokens,
+        max_tokens: 600,
       }),
     });
-
-    if (!response.ok) {
-      const err = await response.text();
-      return { statusCode: response.status, body: err };
-    }
 
     const json = await response.json();
     const text = json.choices?.[0]?.message?.content || "";
 
     return {
       statusCode: 200,
+      headers,
       body: JSON.stringify({ text }),
     };
   } catch (err) {
-    return { statusCode: 500, body: String(err) };
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ error: err.message }),
+    };
   }
 };
